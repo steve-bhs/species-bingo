@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>빙고판 카드 배치</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f0f0f0;
+      text-align: center;
+      padding: 20px;
+    }
+    .card-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .card {
+      width: 100px;
+      height: 80px;
+      background-color: #fff;
+      border: 1px solid #999;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: grab;
+    }
+    .bingo-board {
+      border-collapse: collapse;
+      margin: 0 auto;
+    }
+    .bingo-board td {
+      width: 80px;
+      height: 80px;
+      border: 2px dashed #ccc;
+      text-align: center;
+      vertical-align: middle;
+    }
+  .marked {
+  background-color: #4caf50 !important;
+  transition: background-color 0.2s ease;
+  padding: 0;
+}
+    #resultArea { margin-top: 20px; font-weight: bold; }
+    #startGame { margin-top: 10px; padding: 10px 20px; font-size: 16px; }
+  .marked { background-color: #90ee90 !important; }
+    .bingo-line td {
+      border: 3px solid red !important;
+    }
+    #resultArea { margin-top: 20px; font-weight: bold; }
+    #startGame { margin-top: 10px; padding: 10px 20px; font-size: 16px; }
+  #line-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .line {
+      position: absolute;
+      height: 4px;
+      background: red;
+      z-index: 10;
+    }
+  .marked .card {
+  background-color: transparent;
+  color: #fff;
+  font-weight: bold;
+  box-shadow: none;
+}
+</style>
+</head>
+<body>
+  <h1>빙고판에 생물 카드를 직접 배치하세요</h1>
+
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 40px;">
+    <div class="card-list" id="cardList" style="flex: 1;">
+  <div id="동물" style="margin:10px; font-weight:bold; font-size:18px; text-align:center;">동물</div>
+  <div id="식물" style="margin:10px; font-weight:bold; font-size:18px; text-align:center;">식물</div>
+  <div id="균류" style="margin:10px; font-weight:bold; font-size:18px; text-align:center;">균류</div>
+  <div id="세균" style="margin:10px; font-weight:bold; font-size:18px; text-align:center;">세균</div>
+  <div id="원생생물" style="margin:10px; font-weight:bold; font-size:18px; text-align:center;">원생생물</div>
+</div>
+
+<div style="flex: 1;">
+  <table class="bingo-board" id="bingoBoard">
+    <tbody>
+      <!-- 5x5 빙고판 생성 -->
+      <script>
+      const boardHTML = [];
+      for (let i = 0; i < 5; i++) {
+        boardHTML.push('<tr>');
+        for (let j = 0; j < 5; j++) {
+          boardHTML.push(`<td ondrop="drop(event)" ondragover="allowDrop(event)"></td>`);
+        }
+        boardHTML.push('</tr>');
+      }
+      document.write(boardHTML.join(''));
+
+      
+    // 셀 클릭 시 체크
+    const bingoBoard = document.getElementById("bingoBoard");
+    bingoBoard.querySelectorAll("td").forEach(cell => {
+      cell.onclick = () => {
+        if (cell.hasChildNodes()) {
+          cell.classList.toggle("marked");
+          checkBingo();
+        }
+      };
+    });
+
+    function checkBingo() {
+      const board = bingoBoard;
+      let count = 0;
+      // 모든 줄 초기화
+      [...board.rows].forEach(row => [...row.cells].forEach(cell => cell.parentElement.classList.remove("bingo-line")));
+
+      const bingoLines = [];
+      for (let i = 0; i < 5; i++) {
+        const row = [...Array(5)].map((_, j) => board.rows[i].cells[j]);
+        const col = [...Array(5)].map((_, j) => board.rows[j].cells[i]);
+        if (row.every(cell => cell.classList.contains("marked"))) { count++; bingoLines.push(row); }
+        if (col.every(cell => cell.classList.contains("marked"))) { count++; bingoLines.push(col); }
+      }
+      const diag1 = [...Array(5)].map((_, i) => board.rows[i].cells[i]);
+      const diag2 = [...Array(5)].map((_, i) => board.rows[i].cells[4 - i]);
+      if (diag1.every(cell => cell.classList.contains("marked"))) { count++; bingoLines.push(diag1); }
+      if (diag2.every(cell => cell.classList.contains("marked"))) { count++; bingoLines.push(diag2); }
+
+      // 강조 표시
+      // Remove previous lines
+      const overlay = document.getElementById("line-overlay");
+      overlay.innerHTML = "";
+      bingoLines.forEach(line => {
+        const rects = line.map(cell => cell.getBoundingClientRect());
+        const x1 = rects[0].left + rects[0].width / 2;
+        const y1 = rects[0].top + rects[0].height / 2;
+        const x2 = rects[4].left + rects[4].width / 2;
+        const y2 = rects[4].top + rects[4].height / 2;
+        const length = Math.hypot(x2 - x1, y2 - y1);
+        const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+        const lineDiv = document.createElement("div");
+        lineDiv.className = "line";
+        lineDiv.style.width = length + "px";
+        lineDiv.style.transform = `rotate(${angle}deg)`;
+        lineDiv.style.transformOrigin = "left center";
+        lineDiv.style.left = x1 + "px";
+        lineDiv.style.top = y1 + "px";
+        overlay.appendChild(lineDiv);
+      });
+
+      document.getElementById("resultArea").innerText = `현재 ${count}빙고입니다.`;
+
+      const filled = [...board.querySelectorAll("td")].every(td => td.hasChildNodes());
+      
+    }
+
+      </script>
+    </tbody>
+  </table>
+    </div> <!-- end right column -->
+  </div> <!-- end flex container -->
+
+  <button onclick="autoFillRandom()">랜덤으로 자동 배치</button>
+  <div id="resultArea"></div>
+  
+  <script>
+    function allowDrop(ev) {
+      ev.preventDefault();
+    }
+    function drag(ev) {
+      ev.dataTransfer.setData("text", ev.target.id);
+    }
+    function drop(ev) {
+  ev.preventDefault();
+  const data = ev.dataTransfer.getData("text");
+  const dragged = document.getElementById(data);
+  let target = ev.target;
+
+  // 드래그한 대상이 셀 내부에 있는 카드일 경우, 부모인 td를 target으로 설정
+  if (target.tagName !== "TD") {
+    while (target && target.tagName !== "TD") {
+      target = target.parentElement;
+    }
+  }
+
+  if (!target || target.tagName !== "TD") return;
+
+  if (target.firstChild) {
+    const temp = target.firstChild;
+    const parent = dragged.parentElement;
+    target.replaceChild(dragged, temp);
+    parent.appendChild(temp);
+  } else {
+    target.appendChild(dragged);
+  }
+}
+
+  
+
+    const saved = JSON.parse(localStorage.getItem("selectedCards"));
+    const list = document.getElementById("cardList");
+    saved.forEach((item, i) => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.id = "card" + i;
+      card.draggable = true;
+      card.ondragstart = drag;
+      card.textContent = item.name;
+      card.title = item.info;
+      document.getElementById(item.category).appendChild(card);
+    });
+
+    // 자동 랜덤 배치는 버튼으로 분리
+function autoFillRandom() {
+  const cells = [...document.querySelectorAll(".bingo-board td")];
+  const shuffled = [...saved].sort(() => Math.random() - 0.5);
+  cells.forEach((cell, i) => {
+    const autoCard = document.getElementById("card" + i);
+    if (autoCard) cell.appendChild(autoCard);
+  });
+}
+    cells.forEach((cell, i) => {
+      if (shuffled[i]) {
+        const autoCard = document.getElementById("card" + i);
+        if (autoCard) cell.appendChild(autoCard);
+      }
+    });
+  </script>
+<div id="line-overlay"></div>
+</body>
+</html>
